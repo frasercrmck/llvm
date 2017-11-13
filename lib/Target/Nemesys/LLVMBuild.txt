@@ -1,0 +1,28 @@
+[common]
+subdirectories = AsmParser InstPrinter MCTargetDesc TargetInfo
+
+[component_0]
+type = TargetGroup
+name = Nemesys
+parent = Target
+has_asmprinter = 1
+
+[component_1]
+type = Library
+name = NemesysCodeGen
+parent = Nemesys
+required_libraries =
+ Analysis
+ AsmPrinter
+ CodeGen
+ Core
+ NemesysAsmParser
+ NemesysDesc
+ NemesysInfo
+ NemesysAsmPrinter
+ MC
+ SelectionDAG
+ Support
+ Target
+ TransformUtils
+add_to_library_groups = Nemesys

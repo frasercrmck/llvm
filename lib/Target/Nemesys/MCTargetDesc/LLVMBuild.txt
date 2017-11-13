@@ -1,0 +1,6 @@
+[component_0]
+type = Library
+name = NemesysDesc
+parent = Nemesys
+required_libraries = NemesysInfo NemesysAsmPrinter MC MCDisassembler Support
+add_to_library_groups = Nemesys

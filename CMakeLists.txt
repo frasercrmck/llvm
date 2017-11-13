@@ -308,6 +308,7 @@ set(LLVM_ALL_TARGETS
   Lanai
   Mips
   MSP430
+  Nemesys
   NVPTX
   PowerPC
   Sparc
