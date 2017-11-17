@@ -1,4 +1,5 @@
 #include "Nemesys.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
@@ -8,6 +9,9 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/TargetRegistry.h"
+#include <map>
+
+#define DEBUG_TYPE "asm-parser"
 
 using namespace llvm;
 
@@ -29,6 +33,18 @@ class NemesysAsmParser : public MCTargetAsmParser {
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
 
+  struct NearMissMessage {
+    SMLoc Loc;
+    SmallString<128> Message;
+  };
+
+  bool ReportNearMisses(SmallVectorImpl<NearMissInfo> &NearMisses, SMLoc IdLoc,
+                        OperandVector &Operands);
+
+  void FilterNearMisses(SmallVectorImpl<NearMissInfo> &NearMissesIn,
+                        SmallVectorImpl<NearMissMessage> &NearMissesOut,
+                        SMLoc IdLoc, OperandVector &Operands);
+
   bool ParseRegister(unsigned &RegNum, SMLoc &StartLoc,
                      SMLoc &EndLoc) override {
     llvm_unreachable("Implement nemesys ParseRegister");
@@ -46,6 +62,13 @@ class NemesysAsmParser : public MCTargetAsmParser {
                                     StringRef Mnemonic);
 
 public:
+  enum NemesysMatchResultTy {
+    Match_Dummy = FIRST_TARGET_MATCH_RESULT_TY,
+#define GET_OPERAND_DIAGNOSTIC_TYPES
+#include "NemesysGenAsmMatcher.inc"
+
+  };
+
   NemesysAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                    const MCInstrInfo &MII, const MCTargetOptions &Options)
       : MCTargetAsmParser(Options, STI, MII), Parser(Parser),
@@ -193,8 +216,10 @@ bool NemesysAsmParser::MatchAndEmitInstruction(SMLoc IdLoc, unsigned &Opcode,
                                                bool MatchingInlineAsm) {
   MCInst Inst;
   SMLoc ErrorLoc;
+  SmallVector<NearMissInfo, 4> NearMisses;
 
-  switch (MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm)) {
+  switch (
+      MatchInstructionImpl(Operands, Inst, &NearMisses, MatchingInlineAsm)) {
   case Match_Success:
     Out.EmitInstruction(Inst, SubtargetInfo);
     Opcode = Inst.getOpcode();
@@ -203,6 +228,8 @@ bool NemesysAsmParser::MatchAndEmitInstruction(SMLoc IdLoc, unsigned &Opcode,
     return Error(IdLoc, "Instruction use requires option to be enabled");
   case Match_MnemonicFail:
     return Error(IdLoc, "Unrecognized instruction mnemonic");
+  case Match_NearMisses:
+    return ReportNearMisses(NearMisses, IdLoc, Operands);
   case Match_InvalidOperand: {
     ErrorLoc = IdLoc;
     if (ErrorInfo != ~0U) {
@@ -225,6 +252,104 @@ bool NemesysAsmParser::MatchAndEmitInstruction(SMLoc IdLoc, unsigned &Opcode,
 #define GET_REGISTER_MATCHER
 #define GET_MATCHER_IMPLEMENTATION
 #include "NemesysGenAsmMatcher.inc"
+
+void NemesysAsmParser::FilterNearMisses(
+    SmallVectorImpl<NearMissInfo> &NearMissesIn,
+    SmallVectorImpl<NearMissMessage> &NearMissesOut, SMLoc IdLoc,
+    OperandVector &Operands) {
+  // Record some information about near-misses that we have already seen, so
+  // that we can avoid reporting redundant ones. For example, if there are
+  // variants of an instruction that take 8- and 16-bit immediates, we want
+  // to only report the widest one.
+  std::multimap<unsigned, unsigned> OperandMissesSeen;
+  SmallSet<uint64_t, 4> FeatureMissesSeen;
+
+  // Process the near-misses in reverse order, so that we see more general ones
+  // first, and so can avoid emitting more specific ones.
+  for (NearMissInfo &I : reverse(NearMissesIn)) {
+    switch (I.getKind()) {
+    case NearMissInfo::NearMissOperand: {
+      SMLoc OperandLoc =
+          ((NemesysOperand &)*Operands[I.getOperandIndex()]).getStartLoc();
+      const char *OperandDiag =
+          getMatchKindDiag((NemesysMatchResultTy)I.getOperandError());
+
+      // If we have already emitted a message for a superclass, don't also
+      // report the sub-class. We consider all operand classes that we don't
+      // have a specialised diagnostic for to be equal for the propose of this
+      // check, so that we don't report the generic error multiple times on the
+      // same operand.
+      unsigned DupCheckMatchClass = OperandDiag ? I.getOperandClass() : ~0U;
+      auto PrevReports = OperandMissesSeen.equal_range(I.getOperandIndex());
+      if (std::any_of(
+              PrevReports.first, PrevReports.second,
+              [DupCheckMatchClass](const std::pair<unsigned, unsigned> Pair) {
+                if (DupCheckMatchClass == ~0U || Pair.second == ~0U)
+                  return Pair.second == DupCheckMatchClass;
+                else
+                  return isSubclass((MatchClassKind)DupCheckMatchClass,
+                                    (MatchClassKind)Pair.second);
+              }))
+        break;
+      OperandMissesSeen.insert(
+          std::make_pair(I.getOperandIndex(), DupCheckMatchClass));
+
+      NearMissMessage Message;
+      Message.Loc = OperandLoc;
+      if (OperandDiag) {
+        Message.Message = OperandDiag;
+      } else if (I.getOperandClass() == InvalidMatchClass) {
+        Message.Message = "too many operands for instruction";
+      } else {
+        Message.Message = "invalid operand for instruction";
+        DEBUG(dbgs() << "Missing diagnostic string for operand class "
+                     << getMatchClassName((MatchClassKind)I.getOperandClass())
+                     << I.getOperandClass() << ", error " << I.getOperandError()
+                     << ", opcode " << MII.getName(I.getOpcode()) << "\n");
+      }
+      NearMissesOut.emplace_back(Message);
+      break;
+    }
+    case NearMissInfo::NearMissFeature:
+    case NearMissInfo::NearMissPredicate:
+      break;
+    case NearMissInfo::NearMissTooFewOperands: {
+      SMLoc EndLoc = ((NemesysOperand &)*Operands.back()).getEndLoc();
+      NearMissesOut.emplace_back(NearMissMessage{
+          EndLoc, StringRef("too few operands for instruction")});
+      break;
+    }
+    case NearMissInfo::NoNearMiss:
+      // This should never leave the matcher.
+      llvm_unreachable("not a near-miss");
+      break;
+    }
+  }
+}
+
+bool NemesysAsmParser::ReportNearMisses(
+    SmallVectorImpl<NearMissInfo> &NearMisses, SMLoc IdLoc,
+    OperandVector &Operands) {
+  SmallVector<NearMissMessage, 4> Messages;
+  FilterNearMisses(NearMisses, Messages, IdLoc, Operands);
+
+  if (Messages.size() == 0) {
+    // No near-misses were found, so the best we can do is "invalid
+    // instruction".
+    return Error(IdLoc, "invalid instruction");
+  } else if (Messages.size() == 1) {
+    // One near miss was found, report it as the sole error.
+    return Error(Messages[0].Loc, Messages[0].Message);
+  } else {
+    // More than one near miss, so report a generic "invalid instruction"
+    // error, followed by notes for each of the near-misses.
+    Error(IdLoc, "invalid instruction, any of the following would fix this:");
+    for (auto &M : Messages) {
+      Note(M.Loc, M.Message);
+    }
+    return true;
+  }
+}
 
 extern "C" void LLVMInitializeNemesysAsmParser() {
   RegisterMCAsmParser<NemesysAsmParser> x(getTheNemesysTarget());
