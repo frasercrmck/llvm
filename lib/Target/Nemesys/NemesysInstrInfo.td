@@ -22,3 +22,13 @@ multiclass ALUInst<string mnemonic, SDNode node> {
 }
 
 defm ADD : ALUInst<"add", add>;
+defm SUB : ALUInst<"sub", sub>;
+defm MPY : ALUInst<"mpy", mul>;
+
+defm AND : ALUInst<"and", and>;
+defm OR  : ALUInst<"or",  or>;
+defm XOR : ALUInst<"xor", xor>;
+
+defm SHL : ALUInst<"shl", shl>;
+defm SRA : ALUInst<"sra", sra>;
+defm SRL : ALUInst<"srl", srl>;
