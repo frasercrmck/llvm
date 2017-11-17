@@ -14,6 +14,7 @@ multiclass ImmOp<int b> {
 }
 
 defm ImmSExt6  : ImmOp<6>;
+defm ImmSExt16 : ImmOp<16>;
 
 multiclass ALUInst<string mnemonic, SDNode node> {
   def r : NemesysInst<(outs RC:$rZ), (ins RC:$rA, RC:$rB),
@@ -36,3 +37,9 @@ defm XOR : ALUInst<"xor", xor>;
 defm SHL : ALUInst<"shl", shl>;
 defm SRA : ALUInst<"sra", sra>;
 defm SRL : ALUInst<"srl", srl>;
+
+def MOV : NemesysInst<(outs RC:$rZ), (ins ImmSExt16:$rA),
+                       "mov $rA, $rZ",
+                      [(set RC:$rZ, ImmSExt16:$rA)]>;
+def MOVH : NemesysInst<(outs RC:$rZ), (ins ImmSExt16:$rA),
+                       "movh $rA, $rZ", []>;

@@ -164,6 +164,14 @@ public:
     return false;
   }
 
+  bool isImmSExt16() const {
+    if (Kind != IMMEDIATE)
+      return false;
+    if (const auto *MCE = dyn_cast<MCConstantExpr>(Imm.Value))
+      return isInt<16>(MCE->getValue());
+    return false;
+  }
+
   bool isMem() const override { return false; }
 
   void print(raw_ostream &OS) const override {
