@@ -1,24 +1,28 @@
 include "NemesysInstrFormats.td"
 
-def ImmSExt6AsmOperand : AsmOperandClass {
-  let Name = "ImmSExt6";
-  let RenderMethod = "addImmOperands";
-  let DiagnosticString = "operand must be 6-bit signed immediate";
+multiclass ImmOp<int b> {
+  def AsmOperand : AsmOperandClass {
+    let Name = NAME;
+    let RenderMethod = "addImmOperands";
+    let DiagnosticString = "operand must be "#b#"-bit signed immediate";
+  }
+
+  def NAME : Operand<i32>, ImmLeaf<i32, "return isInt<"#b#">(Imm);"> {
+    let ParserMatchClass =
+        !cast<AsmOperandClass>(!strconcat(NAME, "AsmOperand"));
+  }
 }
 
-def immSExt6 : Operand<i32>,
-               ImmLeaf<i32, [{ return isInt<6>(Imm); }]> {
-  let ParserMatchClass = ImmSExt6AsmOperand;
-}
+defm ImmSExt6  : ImmOp<6>;
 
 multiclass ALUInst<string mnemonic, SDNode node> {
   def r : NemesysInst<(outs RC:$rZ), (ins RC:$rA, RC:$rB),
                        !strconcat(mnemonic, " $rA, $rB, $rZ"),
                        [(set RC:$rZ, (node RC:$rA, RC:$rB))]>;
 
-  def i : NemesysInst<(outs RC:$rZ), (ins RC:$rA, immSExt6:$rB),
+  def i : NemesysInst<(outs RC:$rZ), (ins RC:$rA, ImmSExt6:$rB),
                        !strconcat(mnemonic, " $rA, $rB, $rZ"),
-                       [(set RC:$rZ, (node RC:$rA, immSExt6:$rB))]>;
+                       [(set RC:$rZ, (node RC:$rA, ImmSExt6:$rB))]>;
 }
 
 defm ADD : ALUInst<"add", add>;
