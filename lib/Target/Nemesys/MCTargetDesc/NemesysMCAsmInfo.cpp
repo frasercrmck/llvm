@@ -7,5 +7,6 @@ void NemesysMCAsmInfo::anchor() {}
 
 NemesysMCAsmInfo::NemesysMCAsmInfo(const Triple & /*TheTriple*/) {
   IsLittleEndian = true;
+  CommentString = ";";
   UseIntegratedAssembler = true;
 }
