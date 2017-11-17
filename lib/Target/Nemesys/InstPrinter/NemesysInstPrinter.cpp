@@ -1,6 +1,7 @@
 #include "NemesysInstPrinter.h"
 #include "Nemesys.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/Support/FormattedStream.h"
 
 using namespace llvm;
 
@@ -18,6 +19,8 @@ void NemesysInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg())
     OS << getRegisterName(Op.getReg());
+  else if (Op.isImm())
+    OS << '#' << Op.getImm();
   else
     llvm_unreachable("Can only print Nemesys registers");
 }

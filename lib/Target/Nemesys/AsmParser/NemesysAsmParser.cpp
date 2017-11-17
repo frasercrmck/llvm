@@ -24,6 +24,7 @@ struct NemesysOperand;
 
 class NemesysAsmParser : public MCTargetAsmParser {
   std::unique_ptr<NemesysOperand> parseRegister();
+  std::unique_ptr<NemesysOperand> parseImmediate();
 
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
@@ -85,7 +86,7 @@ private:
 };
 
 struct NemesysOperand : public MCParsedAsmOperand {
-  enum KindTy { TOKEN, REGISTER } Kind;
+  enum KindTy { TOKEN, REGISTER, IMMEDIATE } Kind;
 
   struct Token {
     const char *Data;
@@ -96,9 +97,14 @@ struct NemesysOperand : public MCParsedAsmOperand {
     unsigned RegNum;
   };
 
+  struct ImmOp {
+    const MCExpr *Value;
+  };
+
   union {
     struct Token Tok;
     struct RegOp Reg;
+    struct ImmOp Imm;
   };
 
   explicit NemesysOperand(KindTy Kind) : MCParsedAsmOperand(), Kind(Kind) {}
@@ -114,6 +120,21 @@ public:
     Inst.addOperand(MCOperand::createReg(getReg()));
   }
 
+  void addImmOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    addExpr(Inst, getImm());
+  }
+
+  void addExpr(MCInst &Inst, const MCExpr *Expr) const {
+    // Add as immediate when possible.  Null MCExpr = 0.
+    if (!Expr)
+      Inst.addOperand(MCOperand::createImm(0));
+    else if (const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Expr))
+      Inst.addOperand(MCOperand::createImm(CE->getValue()));
+    else
+      Inst.addOperand(MCOperand::createExpr(Expr));
+  }
+
   StringRef getToken() const {
     assert(isToken() && "Invalid type access!");
     return StringRef(Tok.Data, Tok.Length);
@@ -124,16 +145,39 @@ public:
     return Reg.RegNum;
   }
 
+  const MCExpr *getImm() const {
+    assert(isImm() && "Invalid type access!");
+    return Imm.Value;
+  }
+
   bool isToken() const override { return Kind == TOKEN; }
 
   bool isReg() const override { return Kind == REGISTER; }
 
-  bool isImm() const override { return false; }
+  bool isImm() const override { return Kind == IMMEDIATE; }
+
+  bool isImmSExt6() const {
+    if (Kind != IMMEDIATE)
+      return false;
+    if (const auto *MCE = dyn_cast<MCConstantExpr>(Imm.Value))
+      return isInt<6>(MCE->getValue());
+    return false;
+  }
 
   bool isMem() const override { return false; }
 
   void print(raw_ostream &OS) const override {
-    OS << "Reg: %r" << getReg() << "\n";
+    switch (Kind) {
+    case TOKEN:
+      OS << "'" << getToken() << "'\n";
+      break;
+    case REGISTER:
+      OS << "Reg: r" << getReg() << "\n";
+      break;
+    case IMMEDIATE:
+      OS << "Imm: " << *getImm() << "\n";
+      break;
+    }
   }
 
   static std::unique_ptr<NemesysOperand> CreateToken(StringRef Str,
@@ -154,6 +198,15 @@ public:
     Op->EndLoc = End;
     return Op;
   }
+
+  static std::unique_ptr<NemesysOperand> createImm(const MCExpr *Val,
+                                                   SMLoc Start, SMLoc End) {
+    auto Op = make_unique<NemesysOperand>(IMMEDIATE);
+    Op->Imm.Value = Val;
+    Op->StartLoc = Start;
+    Op->EndLoc = End;
+    return Op;
+  }
 };
 
 } // namespace
@@ -162,6 +215,9 @@ OperandMatchResultTy NemesysAsmParser::parseOperand(OperandVector *Operands,
                                                     StringRef Mnemonic) {
   // Attempt to parse token as register
   std::unique_ptr<NemesysOperand> Op = parseRegister();
+
+  if (!Op)
+    Op = parseImmediate();
 
   if (!Op) {
     Error(Parser.getTok().getLoc(), "Unknown operand");
@@ -206,6 +262,20 @@ std::unique_ptr<NemesysOperand> NemesysAsmParser::parseRegister() {
       return NemesysOperand::createReg(RegNum, Start, End);
     }
   }
+  return nullptr;
+}
+
+std::unique_ptr<NemesysOperand> NemesysAsmParser::parseImmediate() {
+  SMLoc Start = Parser.getTok().getLoc();
+  SMLoc End = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+
+  if (!parseOptionalToken(AsmToken::Hash))
+    return nullptr;
+
+  const MCExpr *Val;
+  if (Lexer.getKind() == AsmToken::Integer && !Parser.parseExpression(Val))
+    return NemesysOperand::createImm(Val, Start, End);
+
   return nullptr;
 }
 
