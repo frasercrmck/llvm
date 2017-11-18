@@ -62,6 +62,7 @@ class NemesysAsmParser : public MCTargetAsmParser {
 
   OperandMatchResultTy parseOperand(OperandVector *Operands,
                                     StringRef Mnemonic);
+  OperandMatchResultTy parsePCRel16(OperandVector &);
   OperandMatchResultTy parseCondCode(OperandVector &, StringRef, SMLoc);
 
 public:
@@ -248,6 +249,16 @@ public:
 
 OperandMatchResultTy NemesysAsmParser::parseOperand(OperandVector *Operands,
                                                     StringRef Mnemonic) {
+  // Check if the current operand has a custom associated parser, if so, try to
+  // custom parse the operand, or fallback to the general approach.
+  OperandMatchResultTy Result = MatchOperandParserImpl(*Operands, Mnemonic);
+
+  if (Result == MatchOperand_Success)
+    return Result;
+  if (Result == MatchOperand_ParseFail) {
+    Parser.eatToEndOfStatement();
+    return Result;
+  }
   // Attempt to parse token as register
   std::unique_ptr<NemesysOperand> Op = parseRegister();
 
@@ -321,6 +332,21 @@ std::unique_ptr<NemesysOperand> NemesysAsmParser::parseImmediate() {
     return NemesysOperand::createImm(Val, Start, End);
 
   return nullptr;
+}
+
+OperandMatchResultTy NemesysAsmParser::parsePCRel16(OperandVector &Operands) {
+  SMLoc Start = Parser.getTok().getLoc();
+  SMLoc End = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+
+  if (!parseOptionalToken(AsmToken::Hash))
+    return MatchOperand_NoMatch;
+
+  const MCExpr *Val;
+  if (Parser.parseExpression(Val))
+    return MatchOperand_ParseFail;
+
+  Operands.push_back(NemesysOperand::createImm(Val, Start, End));
+  return MatchOperand_Success;
 }
 
 OperandMatchResultTy NemesysAsmParser::parseCondCode(OperandVector &Operands,

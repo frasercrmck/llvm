@@ -93,3 +93,34 @@ def MOV : NemesysInst<(outs RC:$rZ), (ins ImmSExt16:$rA),
                       [(set RC:$rZ, ImmSExt16:$rA)]>;
 def MOVH : NemesysInst<(outs RC:$rZ), (ins ImmSExt16:$rA),
                        "movh $rA, $rZ", []>;
+
+def PCRel16AsmOperand : AsmOperandClass {
+  let Name = "PCRel16";
+  let PredicateMethod = "isImm";
+  let RenderMethod = "addImmOperands";
+  let ParserMethod = "parsePCRel16";
+}
+
+def brtarget : Operand<OtherVT> {
+  let ParserMatchClass = PCRel16AsmOperand;
+}
+
+def BR : NemesysInst<(outs), (ins PC:$pA, brtarget:$tgt),
+                     "br $pA, $tgt", []> {
+  let isBranch = 1;
+}
+
+def CALL : NemesysInst<(outs), (ins brtarget:$tgt),
+                       "call $tgt", []> {
+  let isCall = 1;
+}
+
+def RET : NemesysInst<(outs), (ins), "ret", []> {
+  let isReturn = 1;
+  let isBarrier = 1;
+  let isTerminator = 1;
+}
+
+def HALT : NemesysInst<(outs), (ins), "halt", []> {
+  let hasSideEffects = 1;
+}

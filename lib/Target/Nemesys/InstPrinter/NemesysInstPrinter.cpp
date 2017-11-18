@@ -1,9 +1,10 @@
 #include "NemesysInstPrinter.h"
 #include "MCTargetDesc/NemesysBaseInfo.h"
 #include "Nemesys.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/FormattedStream.h"
 
 using namespace llvm;
 
@@ -23,8 +24,11 @@ void NemesysInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     OS << getRegisterName(Op.getReg());
   else if (Op.isImm())
     OS << '#' << Op.getImm();
-  else
-    llvm_unreachable("Can only print Nemesys registers");
+  else if (Op.isExpr()) {
+    OS << '#';
+    Op.getExpr()->print(OS, &MAI);
+  } else
+    llvm_unreachable("Can only print registers, immediates, and expressions");
 }
 
 void NemesysInstPrinter::printCondCode(const MCInst *MI, unsigned OpNo,
