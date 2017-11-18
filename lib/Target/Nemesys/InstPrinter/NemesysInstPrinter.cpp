@@ -1,7 +1,9 @@
 #include "NemesysInstPrinter.h"
+#include "MCTargetDesc/NemesysBaseInfo.h"
 #include "Nemesys.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/Debug.h"
 
 using namespace llvm;
 
@@ -23,4 +25,13 @@ void NemesysInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     OS << '#' << Op.getImm();
   else
     llvm_unreachable("Can only print Nemesys registers");
+}
+
+void NemesysInstPrinter::printCondCode(const MCInst *MI, unsigned OpNo,
+                                       raw_ostream &OS) const {
+  const MCOperand &Op = MI->getOperand(OpNo);
+  assert(Op.isImm() && "CondCode operand must be immediate");
+  auto Val = static_cast<CondCode>(Op.getImm());
+  assert(CondCodeStrs.count(Val) && "Invalid CondCode operand");
+  OS << CondCodeStrs.find(Val)->second;
 }

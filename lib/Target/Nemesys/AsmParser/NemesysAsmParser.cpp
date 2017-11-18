@@ -1,3 +1,4 @@
+#include "MCTargetDesc/NemesysBaseInfo.h"
 #include "Nemesys.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/MC/MCInst.h"
@@ -61,6 +62,7 @@ class NemesysAsmParser : public MCTargetAsmParser {
 
   OperandMatchResultTy parseOperand(OperandVector *Operands,
                                     StringRef Mnemonic);
+  OperandMatchResultTy parseCondCode(OperandVector &, StringRef, SMLoc);
 
 public:
   enum NemesysMatchResultTy {
@@ -86,7 +88,7 @@ private:
 };
 
 struct NemesysOperand : public MCParsedAsmOperand {
-  enum KindTy { TOKEN, REGISTER, IMMEDIATE } Kind;
+  enum KindTy { TOKEN, REGISTER, IMMEDIATE, CONDCODE } Kind;
 
   struct Token {
     const char *Data;
@@ -105,6 +107,7 @@ struct NemesysOperand : public MCParsedAsmOperand {
     struct Token Tok;
     struct RegOp Reg;
     struct ImmOp Imm;
+    unsigned CC;
   };
 
   explicit NemesysOperand(KindTy Kind) : MCParsedAsmOperand(), Kind(Kind) {}
@@ -135,6 +138,11 @@ public:
       Inst.addOperand(MCOperand::createExpr(Expr));
   }
 
+  void addCondCodeOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createImm(getCC()));
+  }
+
   StringRef getToken() const {
     assert(isToken() && "Invalid type access!");
     return StringRef(Tok.Data, Tok.Length);
@@ -148,6 +156,11 @@ public:
   const MCExpr *getImm() const {
     assert(isImm() && "Invalid type access!");
     return Imm.Value;
+  }
+
+  unsigned getCC() const {
+    assert(isCondCode() && "Invalid type access!");
+    return CC;
   }
 
   bool isToken() const override { return Kind == TOKEN; }
@@ -172,6 +185,8 @@ public:
     return false;
   }
 
+  bool isCondCode() const { return Kind == CONDCODE; }
+
   bool isMem() const override { return false; }
 
   void print(raw_ostream &OS) const override {
@@ -184,6 +199,9 @@ public:
       break;
     case IMMEDIATE:
       OS << "Imm: " << *getImm();
+      break;
+    case CONDCODE:
+      OS << "CC " << getCC();
       break;
     }
   }
@@ -215,6 +233,15 @@ public:
     Op->EndLoc = End;
     return Op;
   }
+
+  static std::unique_ptr<NemesysOperand>
+  createCondCode(const unsigned CC, SMLoc Start, SMLoc End) {
+    auto Op = make_unique<NemesysOperand>(CONDCODE);
+    Op->CC = CC;
+    Op->StartLoc = Start;
+    Op->EndLoc = End;
+    return Op;
+  }
 };
 
 } // namespace
@@ -228,7 +255,7 @@ OperandMatchResultTy NemesysAsmParser::parseOperand(OperandVector *Operands,
     Op = parseImmediate();
 
   if (!Op) {
-    Error(Parser.getTok().getLoc(), "Unknown operand");
+    Error(Parser.getTok().getLoc(), "unknown operand");
     Parser.eatToEndOfStatement();
     return MatchOperand_ParseFail;
   }
@@ -241,8 +268,17 @@ OperandMatchResultTy NemesysAsmParser::parseOperand(OperandVector *Operands,
 bool NemesysAsmParser::ParseInstruction(ParseInstructionInfo & /*Info*/,
                                         StringRef Name, SMLoc NameLoc,
                                         OperandVector &Operands) {
-  StringRef Mnemonic = Name;
+  std::pair<StringRef, StringRef> MnemonicTail = Name.split('.');
+  StringRef Mnemonic = MnemonicTail.first, Suffix = MnemonicTail.second;
   Operands.push_back(NemesysOperand::CreateToken(Mnemonic, NameLoc));
+
+  // Parse optional condition code
+  if (!MnemonicTail.second.empty()) {
+    SMLoc SuffixLoc =
+        SMLoc::getFromPointer(NameLoc.getPointer() + Mnemonic.size() + 1);
+    if (parseCondCode(Operands, Suffix, SuffixLoc) == MatchOperand_ParseFail)
+      return true;
+  }
 
   // If there are no more operands, then finish
   if (Lexer.is(AsmToken::EndOfStatement))
@@ -285,6 +321,27 @@ std::unique_ptr<NemesysOperand> NemesysAsmParser::parseImmediate() {
     return NemesysOperand::createImm(Val, Start, End);
 
   return nullptr;
+}
+
+OperandMatchResultTy NemesysAsmParser::parseCondCode(OperandVector &Operands,
+                                                     StringRef Tail,
+                                                     SMLoc SuffixLoc) {
+  SMLoc End = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+
+  auto CCIt = std::find_if(CondCodeStrs.begin(), CondCodeStrs.end(),
+                           [Tail](const std::pair<CondCode, const char *> &P) {
+                             return Tail == P.second;
+                           });
+
+  if (CCIt != CondCodeStrs.end()) {
+    Operands.push_back(
+        NemesysOperand::createCondCode(CCIt->first, SuffixLoc, End));
+    return MatchOperand_Success;
+  }
+
+  Error(SuffixLoc, "unknown condition code");
+  Parser.eatToEndOfStatement();
+  return MatchOperand_ParseFail;
 }
 
 bool NemesysAsmParser::MatchAndEmitInstruction(SMLoc IdLoc, unsigned &Opcode,

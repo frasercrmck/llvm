@@ -8,7 +8,12 @@ def NemesysAsmParser : AsmParser {
   bit ReportMultipleNearMisses = 1;
 }
 
+def NemesysAsmParserVariant : AsmParserVariant {
+  string SeparatorCharacters = " \t,.";
+}
+
 def Nemesys : Target {
   let AssemblyParsers = [NemesysAsmParser];
+  let AssemblyParserVariants = [NemesysAsmParserVariant];
   let InstructionSet = NemesysInstrInfo;
 }
