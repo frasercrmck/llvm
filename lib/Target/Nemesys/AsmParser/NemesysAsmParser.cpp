@@ -177,13 +177,13 @@ public:
   void print(raw_ostream &OS) const override {
     switch (Kind) {
     case TOKEN:
-      OS << "'" << getToken() << "'\n";
+      OS << "'" << getToken() << "'";
       break;
     case REGISTER:
-      OS << "Reg: r" << getReg() << "\n";
+      OS << "Reg: r" << getReg();
       break;
     case IMMEDIATE:
-      OS << "Imm: " << *getImm() << "\n";
+      OS << "Imm: " << *getImm();
       break;
     }
   }
