@@ -1,11 +1,11 @@
-class NemesysReg<string n, list<string> altNames = []>
+class NemesysReg<string n, bits<16> enc, list<string> altNames = []>
       : Register<n, altNames> {
-  field bits<5> Num;
+  let HWEncoding = enc;
   let Namespace = "Nemesys";
 }
 
 foreach i = 0-31 in {
-  def R#i : NemesysReg<"r"#i>;
+  def R#i : NemesysReg<"r"#i, i>;
 }
 
 def RC : RegisterClass<"Nemesys", [i32], 32, (add (sequence "R%i", 0, 31))> {
@@ -13,7 +13,7 @@ def RC : RegisterClass<"Nemesys", [i32], 32, (add (sequence "R%i", 0, 31))> {
 }
 
 foreach i = 0-7 in {
-  def P#i : NemesysReg<"p"#i>;
+  def P#i : NemesysReg<"p"#i, i>;
 }
 
 def PC : RegisterClass<"Nemesys", [i1], 32, (add (sequence "P%i", 0, 7))> {
