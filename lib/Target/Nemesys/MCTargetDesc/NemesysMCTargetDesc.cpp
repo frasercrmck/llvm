@@ -36,6 +36,11 @@ static MCInstPrinter *createNemesysMCInstPrinter(const Triple & /*T*/,
   return new NemesysInstPrinter(MAI, MII, MRI);
 }
 
+static MCSubtargetInfo *
+createNemesysMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
+  return createNemesysMCSubtargetInfoImpl(TT, CPU, FS);
+}
+
 extern "C" void LLVMInitializeNemesysTargetMC() {
   RegisterMCAsmInfo<NemesysMCAsmInfo> X(getTheNemesysTarget());
 
@@ -47,4 +52,7 @@ extern "C" void LLVMInitializeNemesysTargetMC() {
 
   TargetRegistry::RegisterMCInstPrinter(getTheNemesysTarget(),
                                         createNemesysMCInstPrinter);
+
+  TargetRegistry::RegisterMCSubtargetInfo(getTheNemesysTarget(),
+                                          createNemesysMCSubtargetInfo);
 }
