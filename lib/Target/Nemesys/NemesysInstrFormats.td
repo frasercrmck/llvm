@@ -4,6 +4,7 @@ class NemesysInst<bits<5> opc,
                   string asmstr, list<dag> pattern>
     : Instruction {
   field bits<32> Inst;
+  field bits<32> SoftFail;
 
   let Namespace = "Nemesys";
 
