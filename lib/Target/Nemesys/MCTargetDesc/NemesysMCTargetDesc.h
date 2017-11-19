@@ -12,6 +12,8 @@ class MCCodeEmitter;
 class MCRegisterInfo;
 class MCAsmBackend;
 class MCTargetOptions;
+class MCObjectWriter;
+class raw_pwrite_stream;
 
 Target &getTheNemesysTarget();
 
@@ -21,6 +23,9 @@ MCAsmBackend *createNemesysAsmBackend(const Target &, const MCRegisterInfo &,
 
 MCCodeEmitter *createNemesysMCCodeEmitter(const MCInstrInfo &,
                                           const MCRegisterInfo &, MCContext &);
+
+std::unique_ptr<MCObjectWriter>
+createNemesysELFObjectWriter(raw_pwrite_stream &, uint8_t);
 
 } // namespace llvm
 

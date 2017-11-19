@@ -3,4 +3,5 @@ add_llvm_library(LLVMNemesysDesc
   NemesysMCAsmInfo.cpp
   NemesysAsmBackend.cpp
   NemesysMCCodeEmitter.cpp
+  NemesysELFObjectWriter.cpp
 )
