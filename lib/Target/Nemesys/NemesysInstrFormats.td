@@ -1,5 +1,6 @@
 // Generic Nemesys Format
-class NemesysInst<dag outs, dag ins,
+class NemesysInst<bits<5> opc,
+                  dag outs, dag ins,
                   string asmstr, list<dag> pattern>
     : Instruction {
   field bits<32> Inst;
@@ -8,12 +9,46 @@ class NemesysInst<dag outs, dag ins,
 
   let Size = 4;
 
-  bits<5> Opcode = 0;
-  let Inst{31 - 27} = Opcode;
+  let Inst{31 - 27} = opc;
 
   let OutOperandList = outs;
   let InOperandList = ins;
 
   let AsmString = asmstr;
   let Pattern = pattern;
+}
+
+class ALUInst<bits<5> opc, dag outs, dag ins,
+              string asmstr, list<dag> pattern>
+    : NemesysInst<opc, outs, ins, asmstr, pattern> {
+  bits<5> rZ;
+  bits<5> rA;
+  let Inst{26 - 21} = 0;
+  let Inst{20 - 16} = rZ;
+  let Inst{15 - 10} = 0;
+  let Inst{9 - 5} = rA;
+  let Inst{4 - 0} = 0;
+}
+
+class CMPInst<bits<5> opc, dag outs, dag ins,
+              string asmstr, list<dag> pattern>
+    : NemesysInst<opc, outs, ins, asmstr, pattern> {
+  bits<3> pZ;
+  bits<3> cc;
+  bits<5> rA;
+  let Inst{26 - 19} = 0;
+  let Inst{18 - 16} = pZ;
+  let Inst{15 - 13} = 0;
+  let Inst{12 - 10} = cc;
+  let Inst{9 - 5} = rA;
+  let Inst{4 - 0} = 0;
+}
+
+class MOVInst<bits<5> opc, dag outs, dag ins,
+              string asmstr, list<dag> pattern>
+    : NemesysInst<opc, outs, ins, asmstr, pattern> {
+  bits<5> rZ;
+  bits<16> rA;
+  let Inst{20 - 16} = rZ;
+  let Inst{15 - 0} = rA;
 }

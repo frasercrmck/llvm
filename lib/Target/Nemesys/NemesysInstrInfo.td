@@ -16,27 +16,38 @@ multiclass ImmOp<int b> {
 defm ImmSExt6  : ImmOp<6>;
 defm ImmSExt16 : ImmOp<16>;
 
-multiclass ALUInst<string mnemonic, SDNode node> {
-  def r : NemesysInst<(outs RC:$rZ), (ins RC:$rA, RC:$rB),
-                       !strconcat(mnemonic, " $rA, $rB, $rZ"),
-                       [(set RC:$rZ, (node RC:$rA, RC:$rB))]>;
+multiclass ALUBinOp<bits<5> opc, string mnemonic, SDNode node> {
+  def r : ALUInst<opc,
+                  (outs RC:$rZ), (ins RC:$rA, RC:$rB),
+                  !strconcat(mnemonic, " $rA, $rB, $rZ"),
+                  [(set RC:$rZ, (node RC:$rA, RC:$rB))]> {
+    bits<5> rB;
+    let Inst{26}    = 0;
+    let Inst{4 - 0} = rB;
+  }
 
-  def i : NemesysInst<(outs RC:$rZ), (ins RC:$rA, ImmSExt6:$rB),
-                       !strconcat(mnemonic, " $rA, $rB, $rZ"),
-                       [(set RC:$rZ, (node RC:$rA, ImmSExt6:$rB))]>;
+  def i : ALUInst<opc,
+                  (outs RC:$rZ), (ins RC:$rA, ImmSExt6:$rB),
+                  !strconcat(mnemonic, " $rA, $rB, $rZ"),
+                  [(set RC:$rZ, (node RC:$rA, ImmSExt6:$rB))]> {
+    bits<6> rB;
+    let Inst{26}    = 1;
+    let Inst{25}    = rB{5};
+    let Inst{4 - 0} = rB{4 - 0};
+  }
 }
 
-defm ADD : ALUInst<"add", add>;
-defm SUB : ALUInst<"sub", sub>;
-defm MPY : ALUInst<"mpy", mul>;
+defm ADD : ALUBinOp<0x0, "add", add>;
+defm SUB : ALUBinOp<0x1, "sub", sub>;
+defm MPY : ALUBinOp<0x2, "mpy", mul>;
 
-defm AND : ALUInst<"and", and>;
-defm OR  : ALUInst<"or",  or>;
-defm XOR : ALUInst<"xor", xor>;
+defm AND : ALUBinOp<0x5, "and", and>;
+defm OR  : ALUBinOp<0x6, "or",  or>;
+defm XOR : ALUBinOp<0x7, "xor", xor>;
 
-defm SHL : ALUInst<"shl", shl>;
-defm SRA : ALUInst<"sra", sra>;
-defm SRL : ALUInst<"srl", srl>;
+defm SHL : ALUBinOp<0xA, "shl", shl>;
+defm SRA : ALUBinOp<0xB, "sra", sra>;
+defm SRL : ALUBinOp<0xC, "srl", srl>;
 
 def CondCodeAsmOperand : AsmOperandClass {
   let Name = "CondCode";
@@ -49,12 +60,21 @@ def CondCode : Operand<i32>, ImmLeaf<i32, "return isInt<"#b#">(Imm);"> {
   let ParserMatchClass = CondCodeAsmOperand;
 }
 
-def CMPr : NemesysInst<(outs PC:$pZ),
-                       (ins RC:$rA, RC:$rB, CondCode:$cc),
-                       "cmp.$cc $rA, $rB, $pZ", []>;
-def CMPi : NemesysInst<(outs PC:$pZ),
-                       (ins RC:$rA, ImmSExt6:$rB, CondCode:$cc),
-                       "cmp.$cc $rA, $rB, $pZ", []>;
+def CMPr : CMPInst<0xD, (outs PC:$pZ),
+                   (ins RC:$rA, RC:$rB, CondCode:$cc),
+                   "cmp.$cc $rA, $rB, $pZ", []> {
+  bits<5> rB;
+  let Inst{4 - 0} = rB;
+}
+
+def CMPi : CMPInst<0xD, (outs PC:$pZ),
+                   (ins RC:$rA, ImmSExt6:$rB, CondCode:$cc),
+                   "cmp.$cc $rA, $rB, $pZ", []> {
+  bits<6> rB;
+  let Inst{26} = 1;
+  let Inst{25} = rB{5};
+  let Inst{4 - 0} = rB{4 - 0};
+}
 
 multiclass CMPPat<SDPatternOperator op, bit Reverse, bits<3> cc> {
   def : Pat<(op RC:$rA, RC:$rB),
@@ -88,11 +108,11 @@ defm : CMPPat<setgt,  1, CC.LE>;
 defm : CMPPat<setuge, 1, CC.ULT>;
 defm : CMPPat<setugt, 1, CC.ULE>;
 
-def MOV : NemesysInst<(outs RC:$rZ), (ins ImmSExt16:$rA),
-                       "mov $rA, $rZ",
-                      [(set RC:$rZ, ImmSExt16:$rA)]>;
-def MOVH : NemesysInst<(outs RC:$rZ), (ins ImmSExt16:$rA),
-                       "movh $rA, $rZ", []>;
+def MOV  : MOVInst<0xF, (outs RC:$rZ), (ins ImmSExt16:$rA),
+                   "mov $rA, $rZ",
+                   [(set RC:$rZ, ImmSExt16:$rA)]>;
+def MOVH : MOVInst<0x10, (outs RC:$rZ), (ins ImmSExt16:$rA),
+                   "movh $rA, $rZ", []>;
 
 def PCRel16AsmOperand : AsmOperandClass {
   let Name = "PCRel16";
@@ -102,25 +122,34 @@ def PCRel16AsmOperand : AsmOperandClass {
 }
 
 def brtarget : Operand<OtherVT> {
+  let EncoderMethod = "getPCRel16Value";
   let ParserMatchClass = PCRel16AsmOperand;
 }
 
-def BR : NemesysInst<(outs), (ins PC:$pA, brtarget:$tgt),
+def BR : NemesysInst<0x13, (outs), (ins PC:$pA, brtarget:$tgt),
                      "br $pA, $tgt", []> {
+  bits<3> pA;
+  bits<16> tgt;
   let isBranch = 1;
+  // TODO: encode predicate inversion
+  //let Inst{19} = inv;
+  let Inst{18 - 16} = pA;
+  let Inst{15 - 0} = tgt;
 }
 
-def CALL : NemesysInst<(outs), (ins brtarget:$tgt),
+def CALL : NemesysInst<0x15, (outs), (ins brtarget:$tgt),
                        "call $tgt", []> {
+  bits<16> tgt;
   let isCall = 1;
+  let Inst{15 - 0} = tgt;
 }
 
-def RET : NemesysInst<(outs), (ins), "ret", []> {
+def RET : NemesysInst<0x16, (outs), (ins), "ret", []> {
   let isReturn = 1;
   let isBarrier = 1;
   let isTerminator = 1;
 }
 
-def HALT : NemesysInst<(outs), (ins), "halt", []> {
+def HALT : NemesysInst<0x14, (outs), (ins), "halt", []> {
   let hasSideEffects = 1;
 }
