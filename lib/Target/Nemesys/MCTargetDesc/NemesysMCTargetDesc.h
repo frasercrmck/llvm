@@ -6,6 +6,9 @@
 namespace llvm {
 class Target;
 class Triple;
+class MCInstrInfo;
+class MCContext;
+class MCCodeEmitter;
 class MCRegisterInfo;
 class MCAsmBackend;
 class MCTargetOptions;
@@ -15,6 +18,9 @@ Target &getTheNemesysTarget();
 MCAsmBackend *createNemesysAsmBackend(const Target &, const MCRegisterInfo &,
                                       const Triple &, StringRef,
                                       const MCTargetOptions &);
+
+MCCodeEmitter *createNemesysMCCodeEmitter(const MCInstrInfo &,
+                                          const MCRegisterInfo &, MCContext &);
 
 } // namespace llvm
 
