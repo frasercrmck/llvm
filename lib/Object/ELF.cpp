@@ -87,6 +87,12 @@ StringRef llvm::object::getELFRelocationTypeName(uint32_t Machine,
     default:
       break;
     }
+  case ELF::EM_NEMESYS:
+    switch (Type) {
+#include "llvm/BinaryFormat/ELFRelocs/Nemesys.def"
+    default:
+      break;
+    }
     break;
   case ELF::EM_PPC:
     switch (Type) {
