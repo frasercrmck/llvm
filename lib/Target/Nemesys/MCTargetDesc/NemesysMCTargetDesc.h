@@ -1,11 +1,20 @@
 #ifndef LLVM_LIB_TARGET_NEMESYS_MCTARGETDESC_NEMESYSMCTARGETDESC_H
 #define LLVM_LIB_TARGET_NEMESYS_MCTARGETDESC_NEMESYSMCTARGETDESC_H
 
+#include "llvm/ADT/StringRef.h"
+
 namespace llvm {
 class Target;
 class Triple;
+class MCRegisterInfo;
+class MCAsmBackend;
+class MCTargetOptions;
 
 Target &getTheNemesysTarget();
+
+MCAsmBackend *createNemesysAsmBackend(const Target &, const MCRegisterInfo &,
+                                      const Triple &, StringRef,
+                                      const MCTargetOptions &);
 
 } // namespace llvm
 

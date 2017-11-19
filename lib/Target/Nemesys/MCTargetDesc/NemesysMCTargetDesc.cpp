@@ -53,6 +53,9 @@ extern "C" void LLVMInitializeNemesysTargetMC() {
   TargetRegistry::RegisterMCInstPrinter(getTheNemesysTarget(),
                                         createNemesysMCInstPrinter);
 
+  TargetRegistry::RegisterMCAsmBackend(getTheNemesysTarget(),
+                                       createNemesysAsmBackend);
+
   TargetRegistry::RegisterMCSubtargetInfo(getTheNemesysTarget(),
                                           createNemesysMCSubtargetInfo);
 }
