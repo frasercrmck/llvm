@@ -14,6 +14,7 @@ void NemesysInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
                                    StringRef Annotation,
                                    const MCSubtargetInfo & /*STI*/) {
   printInstruction(MI, OS);
+  printAnnotation(OS, Annotation);
 }
 
 void NemesysInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
