@@ -40,3 +40,10 @@ void NemesysInstPrinter::printCondCode(const MCInst *MI, unsigned OpNo,
   assert(CondCodeStrs.count(Val) && "Invalid CondCode operand");
   OS << CondCodeStrs.find(Val)->second;
 }
+
+void NemesysInstPrinter::printNegatablePred(const MCInst *MI, unsigned OpNo,
+                                            raw_ostream &OS) const {
+  const MCOperand &RegOp = MI->getOperand(OpNo);
+  const MCOperand &NegOp = MI->getOperand(OpNo + 1);
+  OS << (NegOp.getImm() == 1 ? "!" : "") << getRegisterName(RegOp.getReg());
+}

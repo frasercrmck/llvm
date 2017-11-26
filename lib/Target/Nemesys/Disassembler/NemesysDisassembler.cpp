@@ -70,6 +70,13 @@ static DecodeStatus DecodePCRegisterClass(MCInst &MI, uint64_t RegNo,
   return DecodeRegister(MI, RegNo, PCDecoderTable, sizeof(PCDecoderTable));
 }
 
+static DecodeStatus decodeNegatablePred(MCInst &MI, uint64_t Field,
+                                        uint64_t Address, const void *Decoder) {
+  auto Status = DecodePCRegisterClass(MI, Field & 0x7, Address, Decoder);
+  MI.addOperand(MCOperand::createImm((Field >> 3) & 0x1));
+  return Status;
+}
+
 #include "NemesysGenDisassemblerTables.inc"
 
 DecodeStatus NemesysDisassembler::getInstruction(MCInst &MI, uint64_t &Size,

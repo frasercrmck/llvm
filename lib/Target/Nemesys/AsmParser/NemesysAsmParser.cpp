@@ -1,6 +1,7 @@
 #include "MCTargetDesc/NemesysBaseInfo.h"
 #include "Nemesys.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
@@ -24,6 +25,8 @@ namespace {
 struct NemesysOperand;
 
 class NemesysAsmParser : public MCTargetAsmParser {
+  const MCRegisterInfo *MRI;
+
   std::unique_ptr<NemesysOperand> parseRegister();
   std::unique_ptr<NemesysOperand> parseImmediate();
 
@@ -63,6 +66,7 @@ class NemesysAsmParser : public MCTargetAsmParser {
   OperandMatchResultTy parseOperand(OperandVector *Operands,
                                     StringRef Mnemonic);
   OperandMatchResultTy parsePCRel16(OperandVector &);
+  OperandMatchResultTy parseNegatablePred(OperandVector &);
   OperandMatchResultTy parseCondCode(OperandVector &, StringRef, SMLoc);
 
 public:
@@ -77,6 +81,8 @@ public:
                    const MCInstrInfo &MII, const MCTargetOptions &Options)
       : MCTargetAsmParser(Options, STI, MII), Parser(Parser),
         Lexer(Parser.getLexer()), SubtargetInfo(STI) {
+    MCAsmParserExtension::Initialize(Parser);
+    MRI = getContext().getRegisterInfo();
     setAvailableFeatures(
         ComputeAvailableFeatures(SubtargetInfo.getFeatureBits()));
   }
@@ -89,7 +95,7 @@ private:
 };
 
 struct NemesysOperand : public MCParsedAsmOperand {
-  enum KindTy { TOKEN, REGISTER, IMMEDIATE, CONDCODE } Kind;
+  enum KindTy { TOKEN, REGISTER, IMMEDIATE, CONDCODE, NEGATABLE_PRED } Kind;
 
   struct Token {
     const char *Data;
@@ -104,11 +110,17 @@ struct NemesysOperand : public MCParsedAsmOperand {
     const MCExpr *Value;
   };
 
+  struct NegatablePred {
+    bool IsNegated;
+    unsigned RegNum;
+  };
+
   union {
     struct Token Tok;
     struct RegOp Reg;
     struct ImmOp Imm;
     unsigned CC;
+    struct NegatablePred NegPred;
   };
 
   explicit NemesysOperand(KindTy Kind) : MCParsedAsmOperand(), Kind(Kind) {}
@@ -144,6 +156,13 @@ public:
     Inst.addOperand(MCOperand::createImm(getCC()));
   }
 
+  void addNegatablePredOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 2 && "Invalid number of operands!");
+    const auto &NegPred = getNegatablePred();
+    Inst.addOperand(MCOperand::createReg(NegPred.RegNum));
+    Inst.addOperand(MCOperand::createImm(NegPred.IsNegated));
+  }
+
   StringRef getToken() const {
     assert(isToken() && "Invalid type access!");
     return StringRef(Tok.Data, Tok.Length);
@@ -162,6 +181,11 @@ public:
   unsigned getCC() const {
     assert(isCondCode() && "Invalid type access!");
     return CC;
+  }
+
+  NegatablePred getNegatablePred() const {
+    assert(isNegatablePred() && "Invalid type access!");
+    return NegPred;
   }
 
   bool isToken() const override { return Kind == TOKEN; }
@@ -187,6 +211,7 @@ public:
   }
 
   bool isCondCode() const { return Kind == CONDCODE; }
+  bool isNegatablePred() const { return Kind == NEGATABLE_PRED; }
 
   bool isMem() const override { return false; }
 
@@ -203,6 +228,10 @@ public:
       break;
     case CONDCODE:
       OS << "CC " << getCC();
+      break;
+    case NEGATABLE_PRED:
+      OS << "NegPred " << (getNegatablePred().IsNegated ? "!" : "")
+         << getNegatablePred().RegNum;
       break;
     }
   }
@@ -239,6 +268,16 @@ public:
   createCondCode(const unsigned CC, SMLoc Start, SMLoc End) {
     auto Op = make_unique<NemesysOperand>(CONDCODE);
     Op->CC = CC;
+    Op->StartLoc = Start;
+    Op->EndLoc = End;
+    return Op;
+  }
+
+  static std::unique_ptr<NemesysOperand>
+  createNegatablePred(unsigned RegNum, bool IsNegated, SMLoc Start, SMLoc End) {
+    auto Op = make_unique<NemesysOperand>(NEGATABLE_PRED);
+    Op->NegPred.RegNum = RegNum;
+    Op->NegPred.IsNegated = IsNegated;
     Op->StartLoc = Start;
     Op->EndLoc = End;
     return Op;
@@ -346,6 +385,26 @@ OperandMatchResultTy NemesysAsmParser::parsePCRel16(OperandVector &Operands) {
     return MatchOperand_ParseFail;
 
   Operands.push_back(NemesysOperand::createImm(Val, Start, End));
+  return MatchOperand_Success;
+}
+
+OperandMatchResultTy
+NemesysAsmParser::parseNegatablePred(OperandVector &Operands) {
+  SMLoc Start = Parser.getTok().getLoc();
+  SMLoc End = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+
+  bool IsNegated = parseOptionalToken(AsmToken::Exclaim);
+  unsigned RegNum = MatchRegisterName(Lexer.getTok().getIdentifier());
+
+  if (!RegNum)
+    return MatchOperand_ParseFail;
+  else if (!MRI->getRegClass(Nemesys::PCRegClassID).contains(RegNum))
+    return MatchOperand_NoMatch;
+
+  Parser.Lex();
+  Operands.push_back(
+      NemesysOperand::createNegatablePred(RegNum, IsNegated, Start, End));
+
   return MatchOperand_Success;
 }
 

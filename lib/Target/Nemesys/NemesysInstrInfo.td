@@ -127,14 +127,28 @@ def brtarget : Operand<OtherVT> {
   let ParserMatchClass = PCRel16AsmOperand;
 }
 
-def BR : NemesysInst<0x13, (outs), (ins PC:$pA, brtarget:$tgt),
+def NegatablePredAsmOperand : AsmOperandClass {
+  let Name = "NegatablePred";
+  let PredicateMethod = "isNegatablePred";
+  let RenderMethod = "addNegatablePredOperands";
+  let ParserMethod = "parseNegatablePred";
+  let DiagnosticString = "operand must be a predicate in range [p0, p7]";
+}
+
+def NegatablePred : Operand<i1> {
+  let MIOperandInfo = (ops PC:$pA, i32imm:$inverse);
+  let PrintMethod = "printNegatablePred";
+  let DecoderMethod = "decodeNegatablePred";
+  let EncoderMethod = "getNegatablePredValue";
+  let ParserMatchClass = NegatablePredAsmOperand;
+}
+
+def BR : NemesysInst<0x13, (outs), (ins NegatablePred:$pA, brtarget:$tgt),
                      "br $pA, $tgt", []> {
-  bits<3> pA;
+  bits<4> pA;
   bits<16> tgt;
   let isBranch = 1;
-  // TODO: encode predicate inversion
-  //let Inst{19} = inv;
-  let Inst{18 - 16} = pA;
+  let Inst{19 - 16} = pA;
   let Inst{15 - 0} = tgt;
 }
 

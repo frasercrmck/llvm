@@ -1,0 +1,6 @@
+# RUN: llvm-mc -triple=nemesys -disassemble < %s | FileCheck %s
+
+0x80, 0x0d, 0x05, 0x98
+# CHECK: br p5, #3456
+0x80, 0x0d, 0x0d, 0x98
+# CHECK: br !p5, #3456

@@ -23,6 +23,9 @@ public:
   unsigned getPCRel16Value(const MCInst &, const unsigned,
                            SmallVectorImpl<MCFixup> &,
                            const MCSubtargetInfo &) const;
+  unsigned getNegatablePredValue(const MCInst &, const unsigned,
+                                 SmallVectorImpl<MCFixup> &,
+                                 const MCSubtargetInfo &) const;
   uint64_t getBinaryCodeForInstr(const MCInst &, SmallVectorImpl<MCFixup> &,
                                  const MCSubtargetInfo &) const;
   void encodeInstruction(const MCInst &, raw_ostream &,
@@ -66,6 +69,17 @@ unsigned NemesysMCCodeEmitter::getPCRel16Value(const MCInst &MI,
   Fixups.push_back(MCFixup::create(0, Expr, Kind, MI.getLoc()));
 
   return 0;
+}
+
+unsigned NemesysMCCodeEmitter::getNegatablePredValue(
+    const MCInst &MI, const unsigned OpIdx, SmallVectorImpl<MCFixup> &Fixups,
+    const MCSubtargetInfo &) const {
+  const MCOperand &RegMO = MI.getOperand(OpIdx);
+  const MCOperand &ImmMO = MI.getOperand(OpIdx + 1);
+
+  assert(RegMO.isReg() && ImmMO.isImm() && "Invalid negatable predicate");
+  unsigned RegVal = CTX.getRegisterInfo()->getEncodingValue(RegMO.getReg());
+  return ((ImmMO.getImm() & 0x1) << 3) | (RegVal & 0x7);
 }
 
 #include "NemesysGenMCCodeEmitter.inc"
