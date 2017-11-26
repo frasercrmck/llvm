@@ -4,6 +4,9 @@
 ; CHECK: cmp.lt r0, r1, p2
 cmp.lt r0, r1, p2
 
+; CHECK: cmp.uge r0, #9, p2
+cmp.uge r0, #9, p2
+
 ; CHECK-ERROR: error: unknown condition code
 cmp.zz r0, r1, p2
 

@@ -35,12 +35,12 @@ class CMPInst<bits<5> opc, dag outs, dag ins,
               string asmstr, list<dag> pattern>
     : NemesysInst<opc, outs, ins, asmstr, pattern> {
   bits<3> pZ;
-  bits<3> cc;
+  bits<4> cc;
   bits<5> rA;
   let Inst{26 - 19} = 0;
   let Inst{18 - 16} = pZ;
-  let Inst{15 - 13} = 0;
-  let Inst{12 - 10} = cc;
+  let Inst{15 - 14} = 0;
+  let Inst{13 - 10} = cc;
   let Inst{9 - 5} = rA;
   let Inst{4 - 0} = 0;
 }

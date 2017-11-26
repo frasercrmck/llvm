@@ -76,37 +76,38 @@ def CMPi : CMPInst<0xD, (outs PC:$pZ),
   let Inst{4 - 0} = rB{4 - 0};
 }
 
-multiclass CMPPat<SDPatternOperator op, bit Reverse, bits<3> cc> {
-  def : Pat<(op RC:$rA, RC:$rB),
-            !if(Reverse, (CMPr $rB, $rA, cc),
-                         (CMPr $rA, $rB, cc))>;
-  def : Pat<(op RC:$rA, ImmSExt6:$rB),
-            !if(Reverse, (CMPi $rB, $rA, cc),
-                         (CMPi $rA, $rB, cc))>;
+multiclass CMPPat<SDPatternOperator op, bits<4> cc> {
+  def : Pat<(op RC:$rA, RC:$rB), (CMPr $rA, $rB, cc)>;
+  def : Pat<(op RC:$rA, ImmSExt6:$rB), (CMPi $rA, $rB, cc)>;
 }
 
 class NemesysCCs {
-  bits<3> EQ  = 0b000;
-  bits<3> NE  = 0b001;
-  bits<3> LT  = 0b010;
-  bits<3> LE  = 0b011;
-  bits<3> ULT = 0b100;
-  bits<3> ULE = 0b101;
+  bits<4> EQ  = 0b0000;
+  bits<4> NE  = 0b0001;
+  bits<4> LT  = 0b0010;
+  bits<4> LE  = 0b0011;
+  bits<4> ULT = 0b0100;
+  bits<4> ULE = 0b0101;
+
+  bits<4> GE  = 0b1010;
+  bits<4> GT  = 0b1011;
+  bits<4> UGE = 0b1100;
+  bits<4> UGT = 0b1101;
 }
 
 def CC : NemesysCCs;
 
-defm : CMPPat<seteq,  0, CC.EQ>;
-defm : CMPPat<setne,  0, CC.NE>;
-defm : CMPPat<setlt,  0, CC.LT>;
-defm : CMPPat<setle,  0, CC.LE>;
-defm : CMPPat<setult, 0, CC.ULT>;
-defm : CMPPat<setule, 0, CC.ULE>;
+defm : CMPPat<seteq,  CC.EQ>;
+defm : CMPPat<setne,  CC.NE>;
+defm : CMPPat<setlt,  CC.LT>;
+defm : CMPPat<setle,  CC.LE>;
+defm : CMPPat<setult, CC.ULT>;
+defm : CMPPat<setule, CC.ULE>;
 
-defm : CMPPat<setge,  1, CC.LT>;
-defm : CMPPat<setgt,  1, CC.LE>;
-defm : CMPPat<setuge, 1, CC.ULT>;
-defm : CMPPat<setugt, 1, CC.ULE>;
+defm : CMPPat<setge,  CC.GE>;
+defm : CMPPat<setgt,  CC.GT>;
+defm : CMPPat<setuge, CC.UGE>;
+defm : CMPPat<setugt, CC.UGT>;
 
 def MOV  : MOVInst<0xF, (outs RC:$rZ), (ins ImmSExt16:$rA),
                    "mov $rA, $rZ",
