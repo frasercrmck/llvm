@@ -132,7 +132,7 @@ def NegatablePredAsmOperand : AsmOperandClass {
   let PredicateMethod = "isNegatablePred";
   let RenderMethod = "addNegatablePredOperands";
   let ParserMethod = "parseNegatablePred";
-  let DiagnosticString = "operand must be a predicate in range [p0, p7]";
+  let DiagnosticString = PC.DiagnosticString;
 }
 
 def NegatablePred : Operand<i1> {
