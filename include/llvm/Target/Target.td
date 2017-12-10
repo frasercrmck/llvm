@@ -1465,6 +1465,29 @@ class InstrMapping {
   list<list<string> > ValueCols = [];
 }
 
+
+class Enum {
+   /// If set, is the value given to the enumeration member.
+  field int Val = ?;
+
+  /// When this bit is set, the enum will be emitted as a C++ enum class.
+  field bit IsClass = 0;
+
+  /// The field used by the print and match methods when printing or matching
+  /// enumeration members.
+  field string String = ?;
+
+  /// The name of the method used to get the string value of enumeration
+  /// values.
+  field string PrintMethod = ?;
+
+  /// The name of the method used to match from the String value back to the
+  /// enum value. If set, the String field of each enum member must be unique.
+  /// The method returns an Optional<>, where None is returned if there is no
+  /// match.
+  field string MatchMethod = ?;
+}
+
 //===----------------------------------------------------------------------===//
 // Pull in the common support for calling conventions.
 //

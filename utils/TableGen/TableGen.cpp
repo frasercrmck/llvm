@@ -49,6 +49,7 @@ enum ActionType {
   GenX86EVEX2VEXTables,
   GenX86FoldTables,
   GenRegisterBank,
+  GenEnums,
 };
 
 namespace {
@@ -103,7 +104,9 @@ namespace {
                     clEnumValN(GenX86FoldTables, "gen-x86-fold-tables",
                                "Generate X86 fold tables"),
                     clEnumValN(GenRegisterBank, "gen-register-bank",
-                               "Generate registers bank descriptions")));
+                               "Generate registers bank descriptions"),
+                    clEnumValN(GenEnums, "gen-enums",
+                               "Generate enumerations")));
 
   cl::OptionCategory PrintEnumsCat("Options for -print-enums");
   cl::opt<std::string>
@@ -201,6 +204,9 @@ bool LLVMTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     break;
   case GenX86FoldTables:
     EmitX86FoldTables(Records, OS);
+    break;
+  case GenEnums:
+    EmitEnums(Records, OS);
     break;
   }
 
