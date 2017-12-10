@@ -7,6 +7,7 @@ tablegen(LLVM NemesysGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM NemesysGenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM NemesysGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM NemesysGenDisassemblerTables.inc -gen-disassembler)
+tablegen(LLVM NemesysGenEnums.inc -gen-enums)
 
 add_public_tablegen_target(NemesysCommonTableGen)
 

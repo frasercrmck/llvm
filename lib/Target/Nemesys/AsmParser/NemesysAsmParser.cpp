@@ -413,14 +413,8 @@ OperandMatchResultTy NemesysAsmParser::parseCondCode(OperandVector &Operands,
                                                      SMLoc SuffixLoc) {
   SMLoc End = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
 
-  auto CCIt = std::find_if(CondCodeStrs.begin(), CondCodeStrs.end(),
-                           [Tail](const std::pair<CondCode, const char *> &P) {
-                             return Tail == P.second;
-                           });
-
-  if (CCIt != CondCodeStrs.end()) {
-    Operands.push_back(
-        NemesysOperand::createCondCode(CCIt->first, SuffixLoc, End));
+  if (auto CC = matchCCString(Tail.data())) {
+    Operands.push_back(NemesysOperand::createCondCode(*CC, SuffixLoc, End));
     return MatchOperand_Success;
   }
 

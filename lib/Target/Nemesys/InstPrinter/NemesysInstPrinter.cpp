@@ -36,9 +36,7 @@ void NemesysInstPrinter::printCondCode(const MCInst *MI, unsigned OpNo,
                                        raw_ostream &OS) const {
   const MCOperand &Op = MI->getOperand(OpNo);
   assert(Op.isImm() && "CondCode operand must be immediate");
-  auto Val = static_cast<CondCode>(Op.getImm());
-  assert(CondCodeStrs.count(Val) && "Invalid CondCode operand");
-  OS << CondCodeStrs.find(Val)->second;
+  OS << getCCString(static_cast<CC>(Op.getImm()));
 }
 
 void NemesysInstPrinter::printNegatablePred(const MCInst *MI, unsigned OpNo,

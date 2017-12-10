@@ -1,5 +1,12 @@
 include "NemesysInstrFormats.td"
 
+class CC<int v, string s> : Enum {
+  let Val = v;
+  let String = s;
+  let PrintMethod = "getCCString";
+  let MatchMethod = "matchCCString";
+}
+
 multiclass ImmOp<int b> {
   def AsmOperand : AsmOperandClass {
     let Name = NAME;
@@ -76,38 +83,34 @@ def CMPi : CMPInst<0xD, (outs PC:$pZ),
   let Inst{4 - 0} = rB{4 - 0};
 }
 
-multiclass CMPPat<SDPatternOperator op, bits<4> cc> {
-  def : Pat<(op RC:$rA, RC:$rB), (CMPr $rA, $rB, cc)>;
-  def : Pat<(op RC:$rA, ImmSExt6:$rB), (CMPi $rA, $rB, cc)>;
+multiclass CMPPat<SDPatternOperator op, CC cc> {
+  def : Pat<(op RC:$rA, RC:$rB), (CMPr $rA, $rB, cc.Val)>;
+  def : Pat<(op RC:$rA, ImmSExt6:$rB), (CMPi $rA, $rB, cc.Val)>;
 }
 
-class NemesysCCs {
-  bits<4> EQ  = 0b0000;
-  bits<4> NE  = 0b0001;
-  bits<4> LT  = 0b0010;
-  bits<4> LE  = 0b0011;
-  bits<4> ULT = 0b0100;
-  bits<4> ULE = 0b0101;
+def EQ  : CC<0b0000, "eq">;
+def NE  : CC<0b0001, "ne">;
+def LT  : CC<0b0010, "lt">;
+def LE  : CC<0b0011, "le">;
+def ULT : CC<0b0100, "ult">;
+def ULE : CC<0b0101, "ule">;
 
-  bits<4> GE  = 0b1010;
-  bits<4> GT  = 0b1011;
-  bits<4> UGE = 0b1100;
-  bits<4> UGT = 0b1101;
-}
+def GE  : CC<0b1010, "ge">;
+def GT  : CC<0b1011, "gt">;
+def UGE : CC<0b1100, "uge">;
+def UGT : CC<0b1101, "ugt">;
 
-def CC : NemesysCCs;
+defm : CMPPat<seteq,  EQ>;
+defm : CMPPat<setne,  NE>;
+defm : CMPPat<setlt,  LT>;
+defm : CMPPat<setle,  LE>;
+defm : CMPPat<setult, ULT>;
+defm : CMPPat<setule, ULE>;
 
-defm : CMPPat<seteq,  CC.EQ>;
-defm : CMPPat<setne,  CC.NE>;
-defm : CMPPat<setlt,  CC.LT>;
-defm : CMPPat<setle,  CC.LE>;
-defm : CMPPat<setult, CC.ULT>;
-defm : CMPPat<setule, CC.ULE>;
-
-defm : CMPPat<setge,  CC.GE>;
-defm : CMPPat<setgt,  CC.GT>;
-defm : CMPPat<setuge, CC.UGE>;
-defm : CMPPat<setugt, CC.UGT>;
+defm : CMPPat<setge,  GE>;
+defm : CMPPat<setgt,  GT>;
+defm : CMPPat<setuge, UGE>;
+defm : CMPPat<setugt, UGT>;
 
 def MOV  : MOVInst<0xF, (outs RC:$rZ), (ins ImmSExt16:$rA),
                    "mov $rA, $rZ",
