@@ -5298,7 +5298,7 @@ Sema::CreateLaunchBoundsAttr(const AttributeCommonInfo &CI, Expr *MaxThreads,
 void Sema::AddLaunchBoundsAttr(Decl *D, const AttributeCommonInfo &CI,
                                Expr *MaxThreads, Expr *MinBlocks,
                                Expr *MaxBlocks) {
-  if (auto *Attr = SemaRef.CreateLaunchBoundsAttr(CI, MaxThreads, MinBlocks, MaxBlocks))
+  if (auto *Attr = CreateLaunchBoundsAttr(CI, MaxThreads, MinBlocks, MaxBlocks))
     D->addAttr(Attr);
 }
 
