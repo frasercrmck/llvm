@@ -643,7 +643,7 @@ static void instantiateSYCLIntelForcePow2DepthAttr(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
   ExprResult Result = S.SubstExpr(Attr->getValue(), TemplateArgs);
   if (!Result.isInvalid())
-    return S.AddSYCLIntelForcePow2DepthAttr(New, *Attr, Result.getAs<Expr>());
+    return S.SYCL().addSYCLIntelForcePow2DepthAttr(New, *Attr, Result.getAs<Expr>());
 }
 
 static void instantiateSYCLIntelBankWidthAttr(
@@ -653,7 +653,7 @@ static void instantiateSYCLIntelBankWidthAttr(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
   ExprResult Result = S.SubstExpr(Attr->getValue(), TemplateArgs);
   if (!Result.isInvalid())
-    S.AddSYCLIntelBankWidthAttr(New, *Attr, Result.getAs<Expr>());
+    S.SYCL().addSYCLIntelBankWidthAttr(New, *Attr, Result.getAs<Expr>());
 }
 
 static void instantiateSYCLIntelNumBanksAttr(
@@ -663,7 +663,7 @@ static void instantiateSYCLIntelNumBanksAttr(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
   ExprResult Result = S.SubstExpr(Attr->getValue(), TemplateArgs);
   if (!Result.isInvalid())
-    S.AddSYCLIntelNumBanksAttr(New, *Attr, Result.getAs<Expr>());
+    S.SYCL().addSYCLIntelNumBanksAttr(New, *Attr, Result.getAs<Expr>());
 }
 
 static void instantiateSYCLIntelBankBitsAttr(
@@ -678,7 +678,7 @@ static void instantiateSYCLIntelBankBitsAttr(
       return;
     Args.push_back(Result.getAs<Expr>());
   }
-  S.AddSYCLIntelBankBitsAttr(New, *Attr, Args.data(), Args.size());
+  S.SYCL().addSYCLIntelBankBitsAttr(New, *Attr, Args.data(), Args.size());
 }
 
 static void
@@ -691,7 +691,7 @@ instantiateSYCLDeviceHasAttr(Sema &S,
   if (S.SubstExprs(ArrayRef<Expr *>(Attr->aspects_begin(), Attr->aspects_end()),
                    /*IsCall=*/false, TemplateArgs, Args))
     return;
-  S.AddSYCLDeviceHasAttr(New, *Attr, Args.data(), Args.size());
+  S.SYCL().addSYCLDeviceHasAttr(New, *Attr, Args.data(), Args.size());
 }
 
 static void instantiateSYCLUsesAspectsAttr(
@@ -700,13 +700,13 @@ static void instantiateSYCLUsesAspectsAttr(
   EnterExpressionEvaluationContext Unevaluated(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
   SmallVector<Expr *, 8> Args;
-  for (auto I : Attr->aspects()) {
+  for (auto *I : Attr->aspects()) {
     ExprResult Result = S.SubstExpr(I, TemplateArgs);
     if (Result.isInvalid())
       return;
     Args.push_back(Result.getAs<Expr>());
   }
-  S.AddSYCLUsesAspectsAttr(New, *Attr, Args.data(), Args.size());
+  S.SYCL().addSYCLUsesAspectsAttr(New, *Attr, Args.data(), Args.size());
 }
 
 static void instantiateSYCLIntelPipeIOAttr(
@@ -717,7 +717,7 @@ static void instantiateSYCLIntelPipeIOAttr(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
   ExprResult Result = S.SubstExpr(Attr->getID(), TemplateArgs);
   if (!Result.isInvalid())
-    S.addSYCLIntelPipeIOAttr(New, *Attr, Result.getAs<Expr>());
+    S.SYCL().addSYCLIntelPipeIOAttr(New, *Attr, Result.getAs<Expr>());
 }
 
 static void instantiateSYCLIntelLoopFuseAttr(
@@ -727,7 +727,7 @@ static void instantiateSYCLIntelLoopFuseAttr(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
   ExprResult Result = S.SubstExpr(Attr->getValue(), TemplateArgs);
   if (!Result.isInvalid())
-    S.AddSYCLIntelLoopFuseAttr(New, *Attr, Result.getAs<Expr>());
+    S.SYCL().addSYCLIntelLoopFuseAttr(New, *Attr, Result.getAs<Expr>());
 }
 
 static void instantiateIntelReqdSubGroupSize(
@@ -737,7 +737,7 @@ static void instantiateIntelReqdSubGroupSize(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
   ExprResult Result = S.SubstExpr(A->getValue(), TemplateArgs);
   if (!Result.isInvalid())
-    S.AddIntelReqdSubGroupSize(New, *A, Result.getAs<Expr>());
+    S.SYCL().addIntelReqdSubGroupSize(New, *A, Result.getAs<Expr>());
 }
 
 static void instantiateSYCLIntelNumSimdWorkItemsAttr(
@@ -747,7 +747,7 @@ static void instantiateSYCLIntelNumSimdWorkItemsAttr(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
   ExprResult Result = S.SubstExpr(A->getValue(), TemplateArgs);
   if (!Result.isInvalid())
-    S.AddSYCLIntelNumSimdWorkItemsAttr(New, *A, Result.getAs<Expr>());
+    S.SYCL().addSYCLIntelNumSimdWorkItemsAttr(New, *A, Result.getAs<Expr>());
 }
 
 static void instantiateSYCLIntelSchedulerTargetFmaxMhzAttr(
@@ -757,7 +757,7 @@ static void instantiateSYCLIntelSchedulerTargetFmaxMhzAttr(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
   ExprResult Result = S.SubstExpr(A->getValue(), TemplateArgs);
   if (!Result.isInvalid())
-    S.AddSYCLIntelSchedulerTargetFmaxMhzAttr(New, *A, Result.getAs<Expr>());
+    S.SYCL().addSYCLIntelSchedulerTargetFmaxMhzAttr(New, *A, Result.getAs<Expr>());
 }
 
 static void instantiateSYCLIntelNoGlobalWorkOffsetAttr(
@@ -767,7 +767,7 @@ static void instantiateSYCLIntelNoGlobalWorkOffsetAttr(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
   ExprResult Result = S.SubstExpr(A->getValue(), TemplateArgs);
   if (!Result.isInvalid())
-    S.AddSYCLIntelNoGlobalWorkOffsetAttr(New, *A, Result.getAs<Expr>());
+    S.SYCL().addSYCLIntelNoGlobalWorkOffsetAttr(New, *A, Result.getAs<Expr>());
 }
 
 static void instantiateSYCLIntelMaxGlobalWorkDimAttr(
@@ -777,7 +777,7 @@ static void instantiateSYCLIntelMaxGlobalWorkDimAttr(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
   ExprResult Result = S.SubstExpr(A->getValue(), TemplateArgs);
   if (!Result.isInvalid())
-    S.AddSYCLIntelMaxGlobalWorkDimAttr(New, *A, Result.getAs<Expr>());
+    S.SYCL().addSYCLIntelMaxGlobalWorkDimAttr(New, *A, Result.getAs<Expr>());
 }
 
 static void instantiateSYCLIntelMinWorkGroupsPerComputeUnitAttr(
@@ -787,7 +787,7 @@ static void instantiateSYCLIntelMinWorkGroupsPerComputeUnitAttr(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
   ExprResult Result = S.SubstExpr(A->getValue(), TemplateArgs);
   if (!Result.isInvalid())
-    S.AddSYCLIntelMinWorkGroupsPerComputeUnitAttr(New, *A,
+    S.SYCL().addSYCLIntelMinWorkGroupsPerComputeUnitAttr(New, *A,
                                                   Result.getAs<Expr>());
 }
 
@@ -798,7 +798,7 @@ static void instantiateSYCLIntelMaxWorkGroupsPerMultiprocessorAttr(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
   ExprResult Result = S.SubstExpr(A->getValue(), TemplateArgs);
   if (!Result.isInvalid())
-    S.AddSYCLIntelMaxWorkGroupsPerMultiprocessorAttr(New, *A,
+    S.SYCL().addSYCLIntelMaxWorkGroupsPerMultiprocessorAttr(New, *A,
                                                      Result.getAs<Expr>());
 }
 
@@ -809,7 +809,7 @@ static void instantiateSYCLIntelMaxConcurrencyAttr(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
   ExprResult Result = S.SubstExpr(A->getNExpr(), TemplateArgs);
   if (!Result.isInvalid())
-    S.AddSYCLIntelMaxConcurrencyAttr(New, *A, Result.getAs<Expr>());
+    S.SYCL().addSYCLIntelMaxConcurrencyAttr(New, *A, Result.getAs<Expr>());
 }
 
 static void instantiateSYCLIntelPrivateCopiesAttr(
@@ -819,7 +819,7 @@ static void instantiateSYCLIntelPrivateCopiesAttr(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
   ExprResult Result = S.SubstExpr(A->getValue(), TemplateArgs);
   if (!Result.isInvalid())
-    S.AddSYCLIntelPrivateCopiesAttr(New, *A, Result.getAs<Expr>());
+    S.SYCL().addSYCLIntelPrivateCopiesAttr(New, *A, Result.getAs<Expr>());
 }
 
 static void instantiateSYCLIntelMaxReplicatesAttr(
@@ -829,7 +829,7 @@ static void instantiateSYCLIntelMaxReplicatesAttr(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
   ExprResult Result = S.SubstExpr(A->getValue(), TemplateArgs);
   if (!Result.isInvalid())
-    S.AddSYCLIntelMaxReplicatesAttr(New, *A, Result.getAs<Expr>());
+    S.SYCL().addSYCLIntelMaxReplicatesAttr(New, *A, Result.getAs<Expr>());
 }
 
 static void instantiateSYCLIntelInitiationIntervalAttr(
@@ -839,7 +839,7 @@ static void instantiateSYCLIntelInitiationIntervalAttr(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
   ExprResult Result = S.SubstExpr(A->getNExpr(), TemplateArgs);
   if (!Result.isInvalid())
-    S.AddSYCLIntelInitiationIntervalAttr(New, *A, Result.getAs<Expr>());
+    S.SYCL().addSYCLIntelInitiationIntervalAttr(New, *A, Result.getAs<Expr>());
 }
 
 static void instantiateSYCLIntelESimdVectorizeAttr(
@@ -849,7 +849,7 @@ static void instantiateSYCLIntelESimdVectorizeAttr(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
   ExprResult Result = S.SubstExpr(A->getValue(), TemplateArgs);
   if (!Result.isInvalid())
-    S.AddSYCLIntelESimdVectorizeAttr(New, *A, Result.getAs<Expr>());
+    S.SYCL().addSYCLIntelESimdVectorizeAttr(New, *A, Result.getAs<Expr>());
 }
 
 static void instantiateSYCLAddIRAttributesFunctionAttr(
@@ -861,7 +861,7 @@ static void instantiateSYCLAddIRAttributesFunctionAttr(
   if (S.SubstExprs(ArrayRef<Expr *>(A->args_begin(), A->args_end()),
                    /*IsCall=*/false, TemplateArgs, Args))
     return;
-  S.AddSYCLAddIRAttributesFunctionAttr(New, *A, Args);
+  S.SYCL().addSYCLAddIRAttributesFunctionAttr(New, *A, Args);
 }
 
 static void instantiateSYCLAddIRAttributesKernelParameterAttr(
@@ -873,7 +873,7 @@ static void instantiateSYCLAddIRAttributesKernelParameterAttr(
   if (S.SubstExprs(ArrayRef<Expr *>(A->args().begin(), A->args().end()),
                    /*IsCall=*/false, TemplateArgs, Args))
     return;
-  S.AddSYCLAddIRAttributesKernelParameterAttr(New, *A, Args);
+  S.SYCL().addSYCLAddIRAttributesKernelParameterAttr(New, *A, Args);
 }
 
 static void instantiateSYCLAddIRAttributesGlobalVariableAttr(
@@ -885,7 +885,7 @@ static void instantiateSYCLAddIRAttributesGlobalVariableAttr(
   if (S.SubstExprs(ArrayRef<Expr *>(A->args().begin(), A->args().end()),
                    /*IsCall=*/false, TemplateArgs, Args))
     return;
-  S.AddSYCLAddIRAttributesGlobalVariableAttr(New, *A, Args);
+  S.SYCL().addSYCLAddIRAttributesGlobalVariableAttr(New, *A, Args);
 }
 
 static void instantiateSYCLAddIRAnnotationsMemberAttr(
@@ -897,7 +897,7 @@ static void instantiateSYCLAddIRAnnotationsMemberAttr(
   if (S.SubstExprs(ArrayRef<Expr *>(A->args().begin(), A->args().end()),
                    /*IsCall=*/false, TemplateArgs, Args))
     return;
-  S.AddSYCLAddIRAnnotationsMemberAttr(New, *A, Args);
+  S.SYCL().addSYCLAddIRAnnotationsMemberAttr(New, *A, Args);
 }
 
 static void instantiateSYCLWorkGroupSizeHintAttr(
@@ -915,8 +915,8 @@ static void instantiateSYCLWorkGroupSizeHintAttr(
   if (ZResult.isInvalid())
     return;
 
-  S.AddSYCLWorkGroupSizeHintAttr(New, *A, XResult.get(), YResult.get(),
-                                 ZResult.get());
+  S.SYCL().addSYCLWorkGroupSizeHintAttr(New, *A, XResult.get(), YResult.get(),
+                                        ZResult.get());
 }
 
 static void instantiateSYCLIntelMaxWorkGroupSizeAttr(
@@ -934,7 +934,7 @@ static void instantiateSYCLIntelMaxWorkGroupSizeAttr(
   if (ZResult.isInvalid())
     return;
 
-  S.AddSYCLIntelMaxWorkGroupSizeAttr(New, *A, XResult.get(), YResult.get(),
+  S.SYCL().addSYCLIntelMaxWorkGroupSizeAttr(New, *A, XResult.get(), YResult.get(),
                                      ZResult.get());
 }
 
@@ -953,8 +953,8 @@ static void instantiateSYCLReqdWorkGroupSizeAttr(
   if (ZResult.isInvalid())
     return;
 
-  S.AddSYCLReqdWorkGroupSizeAttr(New, *A, XResult.get(), YResult.get(),
-                                 ZResult.get());
+  S.SYCL().addSYCLReqdWorkGroupSizeAttr(New, *A, XResult.get(), YResult.get(),
+                                        ZResult.get());
 }
 
 // This doesn't take any template parameters, but we have a custom action that
