@@ -48,6 +48,7 @@ def do_configure(args, passthrough_args):
     jit_dir = os.path.join(abs_src_dir, "sycl-jit")
     llvm_targets_to_build = args.host_target
     llvm_enable_projects = "clang;" + llvm_external_projects
+    llvm_enable_runtimes = []
     libclc_build_native = "OFF"
     libclc_targets_to_build = ""
     libclc_gen_remangled_variants = "OFF"
@@ -142,7 +143,8 @@ def do_configure(args, passthrough_args):
         print("#############################################")
 
         # For clang-format, clang-tidy and code coverage
-        llvm_enable_projects += ";clang-tools-extra;compiler-rt"
+        llvm_enable_projects += ";clang-tools-extra"
+        llvm_enable_runtimes.append("compiler-rt")
         if sys.platform != "darwin":
             # libclc is required for CI validation
             libclc_enabled = True
@@ -215,6 +217,9 @@ def do_configure(args, passthrough_args):
         "-DBUG_REPORT_URL=https://github.com/intel/llvm/issues",
         "-DSYCL_INSTALL_DEVICE_CONFIG_FILE={}".format(sycl_install_device_config_file),
     ]
+
+    if llvm_enable_runtimes:
+        cmake_cmd.extend([f"-DLLVM_ENABLE_RUNTIMES={';'.join(llvm_enable_runtimes)}"])
 
     if libclc_enabled:
         cmake_cmd.extend(
